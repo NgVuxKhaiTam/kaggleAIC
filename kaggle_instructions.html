@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Kaggle Setup Instructions</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 2rem auto;
+            padding: 3rem;
+            max-width: 900px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .header h1 {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .step-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        .btn-copy {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            float: right;
+            margin-top: -0.5rem;
+        }
+        .important-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1><i class="fas fa-rocket"></i> Kaggle Notebook Setup</h1>
+            <p class="lead">Quick setup guide for AIC2025 Multi-Model Search</p>
+        </div>
+
+        <div class="step-card">
+            <h3><i class="fas fa-upload"></i> Step 1: Upload Files to Kaggle</h3>
+            <p>Upload these files to your Kaggle notebook's <code>/kaggle/working/</code> directory:</p>
+            <ul>
+                <li><strong>kaggle_index.html</strong> - Main web interface</li>
+                <li><strong>kaggle_web_backend.py</strong> - Flask backend server</li>
+                <li><strong>backend_aic.py</strong> - Model definitions (Cell 1)</li>
+            </ul>
+        </div>
+
+        <div class="step-card">
+            <h3><i class="fas fa-play"></i> Step 2: Run Backend Code</h3>
+            <p>Execute these cells in your Kaggle notebook:</p>
+            
+            <h5>Cell 1: Load Models</h5>
+            <div class="code-block">
+                <button class="btn-copy" onclick="copyToClipboard('cell1-code')">Copy</button>
+                <pre id="cell1-code"># Paste content of backend_aic.py here
+# This will initialize BEiT3 and SigLIP models</pre>
+            </div>
+
+            <h5>Cell 2: Start Web Server</h5>
+            <div class="code-block">
+                <button class="btn-copy" onclick="copyToClipboard('cell2-code')">Copy</button>
+                <pre id="cell2-code"># Paste content of kaggle_web_backend.py here
+# This will start the Flask web server</pre>
+            </div>
+        </div>
+
+        <div class="step-card">
+            <h3><i class="fas fa-globe"></i> Step 3: Access Web Interface</h3>
+            <p>After running the backend, you'll see output like:</p>
+            <div class="code-block">
+                <pre>🌐 Ngrok public URL: https://xxxxx-xx-xx-xxx-xxx.ngrok-free.app
+📁 Static files served from: /kaggle/working/
+🚀 Multi-Model Search API is ready!</pre>
+            </div>
+            <p>Click on the Ngrok URL to access your web interface!</p>
+        </div>
+
+        <div class="step-card">
+            <h3><i class="fas fa-cogs"></i> Step 4: Configure Secrets (Optional)</h3>
+            <p>For custom Ngrok domain, add your Ngrok auth token to Kaggle Secrets:</p>
+            <ul>
+                <li>Go to Kaggle Account Settings → Secrets</li>
+                <li>Add secret: <code>NGROK_MAIN</code> = your_ngrok_auth_token</li>
+            </ul>
+        </div>
+
+        <div class="important-note">
+            <h5><i class="fas fa-exclamation-triangle"></i> Important Notes:</h5>
+            <ul class="mb-0">
+                <li>Make sure internet access is enabled in your Kaggle notebook</li>
+                <li>GPU should be enabled for model performance</li>
+                <li>Models will take 2-3 minutes to initialize on first run</li>
+                <li>The web interface will be accessible via the Ngrok URL shown in output</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/api/status" class="btn btn-primary">
+                <i class="fas fa-heartbeat"></i> Check API Status
+            </a>
+            <a href="/" class="btn btn-success">
+                <i class="fas fa-search"></i> Go to Search Interface
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = element.parentElement.querySelector('.btn-copy');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
