@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 AIC2025 - Multi-Model Image Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 2rem auto;
+            padding: 3rem;
+            max-width: 1200px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .header h1 {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .model-selector {
+            background: #e8f4ff;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .model-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .model-beit3 { background: #e3f2fd; color: #1976d2; }
+        .model-siglip { background: #f3e5f5; color: #7b1fa2; }
+        .model-aggregated { background: #e8f5e8; color: #388e3c; }
+        .search-tabs {
+            margin-bottom: 2rem;
+        }
+        .search-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .result-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        .result-card:hover {
+            transform: translateY(-5px);
+        }
+        .distance-badge {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+        .btn-search {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-connected { background: #28a745; }
+        .status-ready { background: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-search"></i> AIC2025 Search</h1>
+            <p class="lead">Multi-Model Image Search - BEiT3 & SigLIP</p>
+            <div>
+                <span class="model-badge model-beit3">🔍 BEiT3</span>
+                <span class="model-badge model-siglip">🎯 SigLIP</span>
+                <span class="model-badge model-aggregated">🤝 Aggregated</span>
+            </div>
+            
+            <!-- Status Section -->
+            <div class="mt-3">
+                <div id="modelStatus" class="alert alert-info">
+                    <i class="fas fa-spinner fa-spin"></i> Checking model status...
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Tabs -->
+        <ul class="nav nav-pills nav-fill search-tabs" id="searchTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="text-tab" data-bs-toggle="pill" 
+                        data-bs-target="#text-search" type="button" role="tab">
+                    <i class="fas fa-font"></i> Text Search
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="image-tab" data-bs-toggle="pill" 
+                        data-bs-target="#image-search" type="button" role="tab">
+                    <i class="fas fa-image"></i> Image Search
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="searchTabContent">
+            <!-- Text Search Tab -->
+            <div class="tab-pane fade show active" id="text-search" role="tabpanel">
+                <div class="search-container">
+                    <h4><i class="fas fa-font"></i> Search by Text Description</h4>
+                    
+                    <!-- Model Selection -->
+                    <div class="model-selector">
+                        <label class="form-label"><strong>🤖 Select Model:</strong></label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="textModel" id="textModelBeit3" value="beit3" checked>
+                                    <label class="form-check-label" for="textModelBeit3">
+                                        <span class="model-badge model-beit3">🔍 BEiT3</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="textModel" id="textModelSiglip" value="siglip">
+                                    <label class="form-check-label" for="textModelSiglip">
+                                        <span class="model-badge model-siglip">🎯 SigLIP</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="textModel" id="textModelAggregated" value="aggregated">
+                                    <label class="form-check-label" for="textModelAggregated">
+                                        <span class="model-badge model-aggregated">🤝 Aggregated</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aggregation Options -->
+                        <div id="textAggregationOptions" style="display: none;" class="mt-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="textIntersectionOnly" checked>
+                                <label class="form-check-label" for="textIntersectionOnly">
+                                    <strong>Intersection Only</strong> - Only show results found by both models
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="text" id="textQuery" class="form-control form-control-lg" 
+                                   placeholder="e.g., beautiful sunset over mountains">
+                        </div>
+                        <div class="col-md-2">
+                            <select id="textTopK" class="form-select">
+                                <option value="5">Top 5</option>
+                                <option value="10" selected>Top 10</option>
+                                <option value="15">Top 15</option>
+                                <option value="20">Top 20</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button id="searchByText" class="btn btn-search w-100">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Search Tab -->
+            <div class="tab-pane fade" id="image-search" role="tabpanel">
+                <div class="search-container">
+                    <h4><i class="fas fa-image"></i> Search by Image</h4>
+                    
+                    <!-- Model Selection -->
+                    <div class="model-selector">
+                        <label class="form-label"><strong>🤖 Select Model:</strong></label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="imageModel" id="imageModelBeit3" value="beit3" checked>
+                                    <label class="form-check-label" for="imageModelBeit3">
+                                        <span class="model-badge model-beit3">🔍 BEiT3</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="imageModel" id="imageModelSiglip" value="siglip">
+                                    <label class="form-check-label" for="imageModelSiglip">
+                                        <span class="model-badge model-siglip">🎯 SigLIP</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="imageModel" id="imageModelAggregated" value="aggregated">
+                                    <label class="form-check-label" for="imageModelAggregated">
+                                        <span class="model-badge model-aggregated">🤝 Aggregated</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aggregation Options -->
+                        <div id="imageAggregationOptions" style="display: none;" class="mt-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="imageIntersectionOnly" checked>
+                                <label class="form-check-label" for="imageIntersectionOnly">
+                                    <strong>Intersection Only</strong> - Only show results found by both models
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="file" id="imageFile" class="form-control" 
+                                   accept="image/*" required>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="imageTopK" class="form-select">
+                                <option value="5">Top 5</option>
+                                <option value="10" selected>Top 10</option>
+                                <option value="15">Top 15</option>
+                                <option value="20">Top 20</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button id="searchByImage" class="btn btn-search w-100">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                    <div id="imagePreview" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Searching for images...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" style="display: none;">
+            <h4 id="resultsTitle"></h4>
+            <div id="resultsGrid" class="results-grid"></div>
+        </div>
+    </div>
+
+    <!-- Video Modal -->
+    <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="videoModalLabel">
+                        <i class="fas fa-video"></i> Video Player
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p id="videoInfo" class="mb-3"></p>
+                    <div id="videoLoadingIndicator" class="mb-3" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading video...</span>
+                        </div>
+                        <p class="mt-2">Loading video...</p>
+                    </div>
+                    <video id="videoPlayer" controls style="width: 100%; max-height: 70vh;" controlsList="nodownload" preload="metadata">
+                        <source id="videoSource" src="" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div id="videoError" class="alert alert-danger mt-3" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Video Error:</strong> Unable to load video.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Check model status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkModelStatus();
+            
+            // Handle model selection changes
+            document.querySelectorAll('input[name="textModel"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const aggregationOptions = document.getElementById('textAggregationOptions');
+                    if (this.value === 'aggregated') {
+                        aggregationOptions.style.display = 'block';
+                    } else {
+                        aggregationOptions.style.display = 'none';
+                    }
+                });
+            });
+
+            document.querySelectorAll('input[name="imageModel"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const aggregationOptions = document.getElementById('imageAggregationOptions');
+                    if (this.value === 'aggregated') {
+                        aggregationOptions.style.display = 'block';
+                    } else {
+                        aggregationOptions.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Check model status
+        async function checkModelStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('modelStatus');
+                let statusHtml = '';
+                
+                if (data.beit3_initialized) {
+                    statusHtml += '<span class="status-indicator status-connected"></span>BEiT3 Ready ';
+                } else {
+                    statusHtml += '<span class="status-indicator status-ready"></span>BEiT3 Not Ready ';
+                }
+                
+                if (data.siglip_initialized) {
+                    statusHtml += '<span class="status-indicator status-connected"></span>SigLIP Ready';
+                } else {
+                    statusHtml += '<span class="status-indicator status-ready"></span>SigLIP Not Ready';
+                }
+                
+                statusDiv.innerHTML = statusHtml;
+                statusDiv.className = 'alert ' + (data.beit3_initialized ? 'alert-success' : 'alert-warning');
+                
+            } catch (error) {
+                document.getElementById('modelStatus').innerHTML = 
+                    '<span class="status-indicator status-ready"></span>Connection Error';
+            }
+        }
+
+        // Text search
+        document.getElementById('searchByText').addEventListener('click', async () => {
+            const text = document.getElementById('textQuery').value.trim();
+            const topK = document.getElementById('textTopK').value;
+            const model = document.querySelector('input[name="textModel"]:checked').value;
+            const intersectionOnly = document.getElementById('textIntersectionOnly').checked;
+            
+            if (!text) {
+                alert('Please enter search text');
+                return;
+            }
+
+            const searchData = {
+                text: text, 
+                top_k: parseInt(topK),
+                model: model
+            };
+
+            if (model === 'aggregated') {
+                searchData.intersection_only = intersectionOnly;
+            }
+
+            await performSearch('text', searchData);
+        });
+
+        // Image search
+        document.getElementById('searchByImage').addEventListener('click', async () => {
+            const fileInput = document.getElementById('imageFile');
+            const topK = document.getElementById('imageTopK').value;
+            const model = document.querySelector('input[name="imageModel"]:checked').value;
+            const intersectionOnly = document.getElementById('imageIntersectionOnly').checked;
+            
+            if (!fileInput.files[0]) {
+                alert('Please select an image');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('top_k', topK);
+            formData.append('model', model);
+            
+            if (model === 'aggregated') {
+                formData.append('intersection_only', intersectionOnly);
+            }
+
+            await performImageSearch(formData);
+        });
+
+        // Image preview
+        document.getElementById('imageFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const preview = document.getElementById('imagePreview');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.innerHTML = `<img src="${e.target.result}" class="img-thumbnail" style="max-width: 300px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Perform text search
+        async function performSearch(type, data) {
+            showLoading(true);
+            hideResults();
+
+            try {
+                const response = await fetch(`/api/search/${type}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResults(result, type === 'text' ? data.text : 'image');
+                } else {
+                    alert(`Search failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Perform image search
+        async function performImageSearch(formData) {
+            showLoading(true);
+            hideResults();
+
+            try {
+                const response = await fetch('/api/search/image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResults(result, 'uploaded image');
+                } else {
+                    alert(`Search failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display results
+        function displayResults(data, query) {
+            const results = data.results || [];
+            const titleEl = document.getElementById('resultsTitle');
+            const gridEl = document.getElementById('resultsGrid');
+            
+            let titleText = `<i class="fas fa-images"></i> Found ${results.length} results for: "${query}"`;
+            if (data.model) {
+                const modelBadges = {
+                    'beit3': '<span class="model-badge model-beit3">🔍 BEiT3</span>',
+                    'siglip': '<span class="model-badge model-siglip">🎯 SigLIP</span>',
+                    'aggregated': '<span class="model-badge model-aggregated">🤝 Aggregated</span>'
+                };
+                titleText += ` ${modelBadges[data.model] || ''}`;
+            }
+            
+            titleEl.innerHTML = titleText;
+            
+            gridEl.innerHTML = results.map((result, idx) => {
+                return `
+                <div class="card result-card">
+                    <div class="card-body text-center">
+                        ${result.public_url ? 
+                            `<div class="mb-3">
+                                <img src="${result.public_url}" class="img-fluid rounded" 
+                                      style="max-height: 200px; object-fit: cover; width: 100%;" 
+                                      crossorigin="anonymous">
+                             </div>` : 
+                            `<div class="bg-light rounded mb-3 d-flex align-items-center justify-content-center flex-column" 
+                                  style="height: 200px;">
+                                <i class="fas fa-image fa-3x text-muted"></i>
+                                <p class="text-muted mt-2 mb-0">No image available</p>
+                            </div>`
+                        }
+                        <h6>${result.image_name || `Result ${idx + 1}`}</h6>
+                        ${result.video_clip ? `<small class="text-info"><i class="fas fa-video"></i> ${result.video_clip} - Frame ${result.frame_number}</small><br>` : ''}
+                        
+                        <!-- Distance display -->
+                        ${result.model === 'aggregated' && (result.distance_beit3 !== undefined || result.distance_siglip !== undefined) ? 
+                            `<div class="mb-2">
+                                <span class="distance-badge">Avg: ${result.distance.toFixed(3)}</span><br>
+                                ${result.distance_beit3 !== undefined ? `<small class="model-badge model-beit3" style="font-size: 0.7rem;">BEiT3: ${result.distance_beit3.toFixed(3)}</small> ` : ''}
+                                ${result.distance_siglip !== undefined ? `<small class="model-badge model-siglip" style="font-size: 0.7rem;">SigLIP: ${result.distance_siglip.toFixed(3)}</small>` : ''}
+                             </div>` :
+                            `<span class="distance-badge">Distance: ${result.distance.toFixed(3)}</span>`
+                        }
+                        
+                        <p class="text-muted mt-2 small">Index: ${result.index}</p>
+                        <div class="btn-group-vertical" style="width: 100%;">
+                            ${result.public_url ? 
+                                `<a href="${result.public_url}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">
+                                    <i class="fas fa-external-link-alt"></i> View Image
+                                </a>` : ''
+                            }
+                            ${result.has_video && result.video_url ? 
+                                `<button onclick="showVideoModal('${result.video_url}', '${result.video_clip}', '${result.frame_number}')" 
+                                         class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-play"></i> Watch Video
+                                </button>` : ''
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;}).join('');
+            
+            document.getElementById('resultsSection').style.display = 'block';
+        }
+
+        // Show video modal
+        function showVideoModal(videoUrl, videoClip, frameNumber) {
+            const videoInfo = document.getElementById('videoInfo');
+            const videoSource = document.getElementById('videoSource');
+            const videoPlayer = document.getElementById('videoPlayer');
+            
+            videoInfo.innerHTML = `<strong>Video Clip:</strong> ${videoClip} | <strong>Frame:</strong> ${frameNumber}`;
+            videoSource.src = videoUrl;
+            videoPlayer.load();
+            
+            const modal = new bootstrap.Modal(document.getElementById('videoModal'));
+            modal.show();
+        }
+
+        // Show/hide loading
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        // Hide results
+        function hideResults() {
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        // Enter key support for text search
+        document.getElementById('textQuery').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('searchByText').click();
+            }
+        });
+    </script>
+</body>
+</html>
